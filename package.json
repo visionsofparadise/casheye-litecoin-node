@@ -35,6 +35,7 @@
 		"cors": "^2.8.5",
 		"express": "^4.17.1",
 		"litecoind": "^1.1.2",
+		"litecore-lib": "^0.13.22",
 		"lodash": "^4.17.21",
 		"xkore-lambda-helpers": "^1.1.79"
 	},
@@ -57,7 +58,6 @@
 		"@types/lodash": "^4.14.168",
 		"@types/node": "^14.14.5",
 		"aws-cdk": "^1.94.1",
-		"bitcore-lib-ltc": "^8.25.7",
 		"jest": "^26.6.0",
 		"parcel-bundler": "^1.12.4",
 		"parcel-plugin-externals": "^0.5.2",
