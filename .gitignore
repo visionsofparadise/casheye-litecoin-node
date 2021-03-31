@@ -1,0 +1,6 @@
+dist
+build
+node_modules
+.cache
+cdk.out
+.env

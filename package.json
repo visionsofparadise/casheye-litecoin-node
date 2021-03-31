@@ -1,0 +1,77 @@
+{
+	"name": "casheye-litecoin-node",
+	"version": "1.0.0",
+	"description": "",
+	"main": "dist/index.js",
+	"scripts": {
+		"compile": "tsc",
+		"build": "parcel build ./src/handlers/*.ts -d build --target node --bundle-node-modules --no-source-maps",
+		"test": "STAGE=test NETWORK=regtest UNIT_TEST=true jest unit --forceExit",
+		"posttest": "rm -r ~/.litecoin/regtest",
+		"synth": "cdk synth",
+		"integration": "jest integration",
+		"performance": "jest performance",
+		"start": "node dist/index.js",
+		"startd": "pm2 start dist/index.js",
+		"deploy": "cdk deploy"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/visionsofparadise/casheye-litecoin-node.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/visionsofparadise/casheye-litecoin-node/issues"
+	},
+	"homepage": "https://github.com/visionsofparadise/casheye-litecoin-node#readme",
+	"dependencies": {
+		"ajv": "^8.0.2",
+		"aws-sdk": "^2.799.0",
+		"axios": "^0.21.0",
+		"bitcoin-core": "^3.0.0",
+		"body-parser": "^1.19.0",
+		"cors": "^2.8.5",
+		"express": "^4.17.1",
+		"litecoind": "^1.1.2",
+		"lodash": "^4.17.21",
+		"xkore-lambda-helpers": "^1.1.79"
+	},
+	"devDependencies": {
+		"@abetomo/simply-imitated-sqs": "^1.1.3",
+		"@aws-cdk/aws-codepipeline": "^1.94.1",
+		"@aws-cdk/aws-codepipeline-actions": "^1.94.1",
+		"@aws-cdk/aws-dynamodb": "^1.94.1",
+		"@aws-cdk/aws-ec2": "^1.94.1",
+		"@aws-cdk/aws-events": "^1.94.1",
+		"@aws-cdk/aws-events-targets": "^1.94.1",
+		"@aws-cdk/aws-iam": "^1.94.1",
+		"@aws-cdk/aws-sqs": "^1.94.1",
+		"@aws-cdk/core": "^1.94.1",
+		"@aws-cdk/pipelines": "^1.94.1",
+		"@types/body-parser": "^1.19.0",
+		"@types/cors": "^2.8.8",
+		"@types/express": "^4.17.8",
+		"@types/jest": "^26.0.15",
+		"@types/lodash": "^4.14.168",
+		"@types/node": "^14.14.5",
+		"aws-cdk": "^1.94.1",
+		"bitcore-lib-ltc": "^8.25.7",
+		"jest": "^26.6.0",
+		"parcel-bundler": "^1.12.4",
+		"parcel-plugin-externals": "^0.5.2",
+		"tree-kill": "^1.2.2",
+		"ts-jest": "^26.4.1",
+		"ts-loader": "^8.0.6",
+		"ts-node": "^9.0.0",
+		"tslint": "^6.1.3",
+		"tslint-config-prettier": "^1.18.0",
+		"tslint-plugin-prettier": "^2.3.0",
+		"typescript": "^4.1.2",
+		"udelay": "^1.0.0"
+	},
+	"externals": [
+		"aws-sdk"
+	]
+}
