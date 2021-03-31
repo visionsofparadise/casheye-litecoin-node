@@ -1,4 +1,4 @@
-import { HDPublicKey, Address, Networks } from 'litecore-lib'
+import { HDPublicKey, Address, Networks } from 'litecore-lib-v5'
 
 export const testAddressGenerator = (n?: number) => {
 	const xPubKeyObj = new HDPublicKey(process.env.TEST_XPUBKEY!);

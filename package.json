@@ -35,7 +35,7 @@
 		"cors": "^2.8.5",
 		"express": "^4.17.1",
 		"litecoind": "^1.1.2",
-		"litecore-lib": "^0.13.22",
+		"litecore-lib-v5": "^0.15.0",
 		"lodash": "^4.17.21",
 		"xkore-lambda-helpers": "^1.1.79"
 	},
