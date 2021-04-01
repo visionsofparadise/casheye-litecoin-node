@@ -1,126 +1,148 @@
-import { eventbridge, logger } from '../helpers';
+import { eventbridge, logger, wait } from '../helpers';
 import axios from 'axios';
-import udelay from 'udelay'
-import { testAddressGenerator } from '../testAddressGenerator'
-import { Source } from '../helpers'
-import day from 'dayjs'
-import chunk from 'lodash/chunk'
-import difference from 'lodash/difference'
+import { testAddressGenerator } from '../testAddressGenerator';
+import { Source } from '../helpers';
+import day from 'dayjs';
+import chunk from 'lodash/chunk';
+import difference from 'lodash/difference';
 
-const instanceUrl = process.env.INSTANCE_URL!
-const n = process.env.PERFORMANCE_TEST_N ? parseInt(process.env.PERFORMANCE_TEST_N) : 200
+const instanceUrl = process.env.INSTANCE_URL!;
+const n = process.env.PERFORMANCE_TEST_N ? parseInt(process.env.PERFORMANCE_TEST_N) : 200;
 
-it(`adds ${n} addresses`, async () => {
-	try {
-		expect.assertions(1)
+it(
+	`adds ${n} addresses`,
+	async () => {
+		try {
+			expect.assertions(1);
 
-		logger.info('Generating messages...')
-		console.time('messages')
-	
-		const entries = []
-	
-		for (let i = 0; i < n; i++) {
-			entries.push({
-				Source,
-				DetailType: 'addressCreated',
-				Detail: JSON.stringify({
-					pubKey: testAddressGenerator(i + (1000 * 1000)),
-					currency: 'LTC',
-					expiresAt: day().add(30, 'minute').unix()
+			logger.info('Generating messages...');
+			console.time('messages');
+
+			const entries = [];
+
+			for (let i = 0; i < n; i++) {
+				entries.push({
+					Source,
+					DetailType: 'addressCreated',
+					Detail: JSON.stringify({
+						pubKey: testAddressGenerator(i + 1000 * 1000),
+						currency: 'LTC',
+						expiresAt: day().add(30, 'minute').unix()
+					})
+				});
+			}
+
+			logger.info('Adding addresses');
+
+			const entriesBatched = chunk(entries, 10);
+
+			await Promise.all(
+				entriesBatched.map(async batch => {
+					await eventbridge
+						.putEvents({
+							Entries: batch
+						})
+						.promise()
+						.catch(logger.error);
+
+					await wait(1000);
 				})
-			})
+			);
+
+			console.timeEnd('entries');
+			logger.info(`${entries.length} entries generated and sent out of ${n}`);
+
+			expect(entries.length).toBe(n);
+
+			return;
+		} catch (err) {
+			logger.error(err);
+
+			throw err;
+		}
+	},
+	10 * 60 * 1000
+);
+
+it(
+	`pays ${n} addresses`,
+	async () => {
+		expect.assertions(1);
+
+		await wait(5 * 60 * 1000);
+
+		logger.info('Sending to addresses...');
+		console.time('sending');
+
+		const sendResults = [];
+
+		for (let i = 0; i < n; i++) {
+			const address = testAddressGenerator(i + 1000 * 1000);
+			const amount = 1 / n;
+
+			const result = await axios
+				.post(instanceUrl + 'rpc', {
+					command: 'sendToAddress',
+					args: [address, amount]
+				})
+				.catch(error => error);
+
+			sendResults.push(result);
 		}
 
-		logger.info('Adding addresses')
+		console.timeEnd('sending');
 
-		const entriesBatched = chunk(entries, 10)
+		expect(sendResults.length).toBe(n);
 
-		await Promise.all(entriesBatched.map(async batch => {
-			await eventbridge.putEvents({
-				Entries: batch
-			}).promise().catch(logger.error)
+		const successfulSends = sendResults.filter(result => result.status && result.status === 200);
 
-			await udelay(1000)
-		}))
-	
-		console.timeEnd('entries')
-		logger.info(`${entries.length} entries generated and sent out of ${n}`)
-	
-		expect(entries.length).toBe(n)
+		logger.info(`Sends ${successfulSends.length} out of ${n}`);
 
 		return;
-	} catch (err) {
-		logger.error(err)
+	},
+	15 * 60 * 1000
+);
 
-		throw err
-	}
-}, 10 * 60 * 1000);
+it(
+	`verifies ${n} addresses have been paid`,
+	async () => {
+		expect.assertions(1);
 
-it(`pays ${n} addresses`, async () => {
-	expect.assertions(1)
+		logger.info('Generating block...');
 
-	await udelay(5 * 60 * 1000)
+		const { data: generateAddress } = await axios.post(instanceUrl + 'rpc', {
+			command: 'getNewAddress',
+			args: []
+		});
 
-	logger.info('Sending to addresses...')
-	console.time('sending')
+		await axios
+			.post(instanceUrl + 'rpc', {
+				command: 'generateToAddress',
+				args: [1, generateAddress]
+			})
+			.catch(error => error);
 
-	const sendResults = []
+		logger.info('waiting for confirmation 5 minutes...');
 
-	for (let i = 0; i < n; i++) {
-		const address = testAddressGenerator(i + (1000 * 1000))
-		const amount = 1 / n
+		await wait(5 * 60 * 1000);
 
-		const result = await axios.post(instanceUrl + 'rpc', {
-			command: 'sendToAddress',
-			args: [address, amount]
-		}).catch(error => error)
+		const response = await axios.post<Array<{ label: string; confirmations: number }>>(instanceUrl + 'rpc', {
+			command: 'listReceivedByAddress',
+			args: [undefined, false, true]
+		});
 
-		sendResults.push(result)
-	}
+		const result = response.data.filter(
+			receivedBy => receivedBy.label === 'confirming' && receivedBy.confirmations === 1
+		);
 
-	console.timeEnd('sending')
+		const diff = difference(response.data, result);
 
-	expect(sendResults.length).toBe(n);
+		logger.info(`Verifications ${result.length} out of ${n}`);
+		logger.info({ diff });
 
-	const successfulSends = sendResults.filter(result => result.status && result.status === 200)
+		expect(result.length).toBe(n);
 
-	logger.info(`Sends ${successfulSends.length} out of ${n}`)
-	
-	return;
-}, 15 * 60 * 1000);
-
-it(`verifies ${n} addresses have been paid`, async () => {
-	expect.assertions(1)
-
-	logger.info('Generating block...')
-
-	const { data: generateAddress } = await axios.post(instanceUrl + 'rpc', {
-		command: 'getNewAddress',
-		args: []
-	})
-
-	await axios.post(instanceUrl + 'rpc', {
-		command: 'generateToAddress',
-		args: [1, generateAddress]
-	}).catch(error => error)
-
-	logger.info('waiting for confirmation 5 minutes...')
-
-	await udelay(5 * 60 * 1000)
-
-	const response = await axios.post<Array<{ label: string; confirmations: number }>>(instanceUrl + 'rpc', {
-		command: 'listReceivedByAddress',
-		args: [undefined, false, true]
-	})
-
-	const result = response.data.filter(receivedBy => receivedBy.label === 'confirming' && receivedBy.confirmations === 1)
-
-	const diff = difference(response.data, result)
-
-	logger.info(`Verifications ${result.length} out of ${n}`)
-	logger.info({ diff })
-
-	expect(result.length).toBe(n)
-	
-	return;
-}, 15 * 60 * 1000);
+		return;
+	},
+	15 * 60 * 1000
+);
